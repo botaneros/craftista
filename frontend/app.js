@@ -85,9 +85,15 @@ app.get('/api/service-status', async (req, res) => {
 app.get('/recommendation-status', (req, res) => {
     axios.get(config.recommendationBaseUri + '/api/recommendation-status')
         .then(response => {
-            res.json({status: "up", message: "Recommendation Service is Online"});
+            // Check if the response indicates the service is operational
+            if (response.data && response.data.status === 'operational') {
+                res.json({status: "up", message: "Recommendation Service is Online"});
+            } else {
+                res.json({status: "down", message: "Recommendation Service returned unexpected status"});
+            }
         })
         .catch(error => {
+            console.log('Recommendation service error:', error.message);
             res.json({status: "down", message: "Recommendation Service is Offline"});
         });
 });
@@ -103,23 +109,25 @@ app.get('/votingservice-status', (req, res) => {
 });
 
 
-app.get('/daily-origami', (req, res) => {
-    axios.get(config.recommendationBaseUri + '/api/origami-of-the-day')
-        .then(response => {
-            res.json(response.data);
-        })
-        .catch(error => {
-            res.status(500).send("Error while fetching daily origami");
-        });
+app.get('/daily-origami', async (req, res) => {
+  console.log('Fetching from:', process.env.RECOMMENDATION_URL + '/api/origami-of-the-day');
+  try {
+    const response = await fetch(`${process.env.RECOMMENDATION_URL}/api/origami-of-the-day`);
+    console.log('Response status:', response.status);
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error('Error details:', error.message);
+    res.status(500).json({ error: 'Failed to fetch daily origami' });
+  }
 });
-
 
 // Handle 404
 app.use((req, res, next) => {
     res.status(404).send('ERROR 404 - Not Found on This Server');
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT_FRONTEND || 3000;
 const server = app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });

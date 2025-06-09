@@ -1,0 +1,14 @@
+FROM node:latest AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm install --quiet
+
+FROM node:latest
+WORKDIR /app
+COPY --from=builder /app/node_modules ./node_modules
+COPY . .
+
+ENV PORT_FRONTEND=3000
+
+EXPOSE ${PORT}
+CMD ["node", "app.js"]
