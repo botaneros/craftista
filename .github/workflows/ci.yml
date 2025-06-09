@@ -47,13 +47,13 @@ jobs:
         working-directory: ./catalogue
         run: |
           pip install -r requirements.txt
-          python3 -m unittest discover tests
+          python3 -m unittest discover -s tests -p "*.py"
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: "temurin"
+          java-version: "17"
 
       - name: Build & Test Voting (Spring Boot)
         working-directory: ./voting
