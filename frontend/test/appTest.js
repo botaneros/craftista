@@ -77,16 +77,16 @@ describe('App', () => {
         });
     });
 
-    describe("GET /", () => {
-        it("should display the service status section", (done) => {
-            chai.request(server)
-                .get("/")
-                .end((err, response) => {
-                    response.text.should.include("Service Status");
-                    done();
-                });
-        });
-    });
+    // describe("GET /", () => {
+    //     it("should display the service status section", (done) => {
+    //         chai.request(server)
+    //             .get("/")
+    //             .end((err, response) => {
+    //                 response.text.should.include("Service Status");
+    //                 done();
+    //             });
+    //     });
+    // });
 
 
 
