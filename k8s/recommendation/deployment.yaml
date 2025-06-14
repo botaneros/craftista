@@ -1,0 +1,32 @@
+# k8s/recomendation/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommendation
+  namespace: craftista
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: recommendation
+  template:
+    metadata:
+      labels:
+        app: recommendation
+    spec:
+      containers:
+      - name: recommendation
+        image: recommendation:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080
+        env:
+        - name: CATALOGUE_URL
+          value: "http://catalogue:5000"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"

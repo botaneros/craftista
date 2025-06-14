@@ -1,0 +1,12 @@
+# k8s/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: craftista
+data:
+  CATALOGUE_URL: "http://catalogue:5000"
+  RECOMMENDATION_URL: "http://recommendation:8080"
+  VOTING_URL: "http://voting:8080"
+  LOG_LEVEL: "INFO"
+  APP_ENV: "production"
