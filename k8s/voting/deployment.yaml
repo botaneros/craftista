@@ -1,0 +1,50 @@
+# k8s/voting/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: voting
+  namespace: craftista
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: voting
+  template:
+    metadata:
+      labels:
+        app: voting
+    spec:
+      containers:
+      - name: voting
+        image: voting:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:postgresql://postgres:5432/craftista"
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_USER
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: "update"
+        - name: SPRING_JPA_SHOW_SQL
+          value: "true"
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT
+          value: "org.hibernate.dialect.PostgreSQLDialect"
+        - name: CATALOGUE_URL
+          value: "http://catalogue:5000"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "400m"
