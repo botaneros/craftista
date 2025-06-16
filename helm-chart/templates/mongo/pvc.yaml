@@ -1,0 +1,20 @@
+{{- if and .Values.mongo.enabled .Values.mongo.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-pvc
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: mongo
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.mongo.persistence.size }}
+  {{- if .Values.mongo.persistence.storageClass }}
+  storageClassName: {{ .Values.mongo.persistence.storageClass }}
+  {{- end }}
+{{- end }}

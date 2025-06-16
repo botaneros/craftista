@@ -1,0 +1,10 @@
+# Patterns to ignore when building packages.
+*.swp
+*.bak
+*.tmp
+*~
+# Various IDEs
+.project
+.idea/
+*.tmproj
+.vscode/

@@ -1,0 +1,32 @@
+{{- if .Values.recommendation.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommendation
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: recommendation
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.recommendation.replicas }}
+  selector:
+    matchLabels:
+      app: recommendation
+  template:
+    metadata:
+      labels:
+        app: recommendation
+    spec:
+      containers:
+      - name: recommendation
+        image: "{{ .Values.recommendation.image.repository }}:{{ .Values.recommendation.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.recommendation.service.port }}
+        env:
+        - name: CATALOGUE_URL
+          value: "http://catalogue:{{ .Values.catalogue.service.port }}"
+        resources:
+          {{- toYaml .Values.recommendation.resources | nindent 10 }}
+{{- end }}

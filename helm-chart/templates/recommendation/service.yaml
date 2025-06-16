@@ -1,0 +1,19 @@
+{{- if .Values.recommendation.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: recommendation
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: recommendation
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  selector:
+    app: recommendation
+  ports:
+  - protocol: TCP
+    port: {{ .Values.recommendation.service.port }}
+    targetPort: {{ .Values.recommendation.service.port }}
+  type: {{ .Values.recommendation.service.type }}
+{{- end }}

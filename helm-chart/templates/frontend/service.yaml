@@ -1,0 +1,19 @@
+{{- if .Values.frontend.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: frontend
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  selector:
+    app: frontend
+  ports:
+  - protocol: TCP
+    port: {{ .Values.frontend.service.port }}
+    targetPort: {{ .Values.frontend.service.port }}
+  type: {{ .Values.frontend.service.type }}
+{{- end }}

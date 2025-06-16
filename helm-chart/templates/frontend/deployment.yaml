@@ -1,0 +1,36 @@
+{{- if .Values.frontend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: frontend
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.frontend.service.port }}
+        env:
+        - name: CATALOGUE_URL
+          value: "http://catalogue:{{ .Values.catalogue.service.port }}"
+        - name: RECOMMENDATION_URL
+          value: "http://recommendation:{{ .Values.recommendation.service.port }}"
+        - name: VOTING_URL
+          value: "http://voting:{{ .Values.voting.service.port }}"
+        resources:
+          {{- toYaml .Values.frontend.resources | nindent 10 }}
+{{- end }}

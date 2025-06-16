@@ -1,0 +1,14 @@
+apiVersion: v2
+name: craftista
+description: A Helm chart for Craftista microservices application
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - craftista
+  - microservices
+  - origami
+home: https://github.com/craftista
+maintainers:
+  - name: DevOps Team
+    email: devops@craftista.com

@@ -1,0 +1,19 @@
+{{- if .Values.mongo.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: mongo
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  selector:
+    app: mongo
+  ports:
+  - protocol: TCP
+    port: 27017
+    targetPort: 27017
+  type: ClusterIP
+{{- end }}

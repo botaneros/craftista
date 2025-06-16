@@ -1,0 +1,43 @@
+# templates/voting/deployment.yaml
+{{- if .Values.voting.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: voting
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: voting
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.voting.replicas }}
+  selector:
+    matchLabels:
+      app: voting
+  template:
+    metadata:
+      labels:
+        app: voting
+    spec:
+      containers:
+      - name: voting
+        image: "{{ .Values.voting.image.repository }}:{{ .Values.voting.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.voting.service.port }}
+        env:
+        - name: SPRING_DATASOURCE_URL
+          value: {{ printf "\"jdbc:postgresql://postgres:5432/%s\"" .Values.postgres.credentials.database }}
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_USER
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        resources:
+          {{- toYaml .Values.voting.resources | nindent 10 }}
+{{- end }}

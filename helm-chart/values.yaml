@@ -1,0 +1,123 @@
+# Global configuration
+global:
+  namespace: craftista
+  imagePullPolicy: Never
+  
+# Environment configuration
+environment:
+  logLevel: INFO
+  appEnv: production
+
+# Database configurations
+postgres:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "13"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "400m"
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+  credentials:
+    username: craftista
+    password: password
+    database: craftista
+
+mongo:
+  enabled: true
+  image:
+    repository: mongo
+    tag: "4.4"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "400m"
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+  database: craftista
+
+# Application services
+catalogue:
+  enabled: true
+  replicas: 2
+  image:
+    repository: catalogue
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 5000
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+frontend:
+  enabled: true
+  replicas: 2
+  image:
+    repository: frontend
+    tag: latest
+  service:
+    type: LoadBalancer
+    port: 3000
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "300m"
+
+voting:
+  enabled: true
+  replicas: 2
+  image:
+    repository: voting
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "768Mi"
+      cpu: "400m"
+    limits:
+      memory: "1.5Gi"
+      cpu: "800m"
+  jpa:
+    hibernate:
+      ddlAuto: update
+    showSql: false
+    dialect: org.hibernate.dialect.PostgreSQLDialect
+
+recommendation:
+  enabled: true
+  replicas: 2
+  image:
+    repository: recommendation
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
