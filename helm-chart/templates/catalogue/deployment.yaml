@@ -1,0 +1,32 @@
+{{- if .Values.catalogue.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalogue
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: catalogue
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.catalogue.replicas }}
+  selector:
+    matchLabels:
+      app: catalogue
+  template:
+    metadata:
+      labels:
+        app: catalogue
+    spec:
+      containers:
+      - name: catalogue
+        image: "{{ .Values.catalogue.image.repository }}:{{ .Values.catalogue.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.catalogue.service.port }}
+        env:
+        - name: MONGO_URL
+          value: "mongodb://mongo:27017/{{ .Values.mongo.database }}"
+        resources:
+          {{- toYaml .Values.catalogue.resources | nindent 10 }}
+{{- end }}

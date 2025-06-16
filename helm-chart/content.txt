@@ -1,0 +1,672 @@
+=== ./templates/configmap.yaml ===
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  CATALOGUE_URL: "http://catalogue:{{ .Values.catalogue.service.port }}"
+  RECOMMENDATION_URL: "http://recommendation:{{ .Values.recommendation.service.port }}"
+  VOTING_URL: "http://voting:{{ .Values.voting.service.port }}"
+  LOG_LEVEL: {{ .Values.environment.logLevel | quote }}
+  APP_ENV: {{ .Values.environment.appEnv | quote }}=== ./templates/namespace.yaml ===
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.global.namespace }}
+  labels:
+    name: {{ .Values.global.namespace }}
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}=== ./templates/postgres/pvc.yaml ===
+{{- if and .Values.postgres.enabled .Values.postgres.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: postgres
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.postgres.persistence.size }}
+  {{- if .Values.postgres.persistence.storageClass }}
+  storageClassName: {{ .Values.postgres.persistence.storageClass }}
+  {{- end }}
+{{- end }}=== ./templates/postgres/service.yaml ===
+{{- if .Values.postgres.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: postgres
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  selector:
+    app: postgres
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+  type: ClusterIP
+{{- end }}=== ./templates/postgres/deployment.yaml ===
+{{- if .Values.postgres.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: postgres
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_DB
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          {{- toYaml .Values.postgres.resources | nindent 10 }}
+      volumes:
+      - name: postgres-storage
+        {{- if .Values.postgres.persistence.enabled }}
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+        {{- else }}
+        emptyDir: {}
+        {{- end }}
+{{- end }}=== ./templates/secrets.yaml ===
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+type: Opaque
+data:
+  POSTGRES_USER: {{ .Values.postgres.credentials.username | b64enc }}
+  POSTGRES_PASSWORD: {{ .Values.postgres.credentials.password | b64enc }}
+  POSTGRES_DB: {{ .Values.postgres.credentials.database | b64enc }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongo-secret
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+type: Opaque
+data:
+  MONGO_INITDB_DATABASE: {{ .Values.mongo.database | b64enc }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+type: Opaque
+data:
+  DATABASE_URL: {{ printf "postgresql://%s:%s@postgres:5432/%s" .Values.postgres.credentials.username .Values.postgres.credentials.password .Values.postgres.credentials.database | b64enc }}
+  MONGO_URL: {{ printf "mongodb://mongo:27017/%s" .Values.mongo.database | b64enc }}=== ./templates/voting/service.yaml ===
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+type: Opaque
+data:
+  POSTGRES_USER: {{ .Values.postgres.credentials.username | b64enc }}
+  POSTGRES_PASSWORD: {{ .Values.postgres.credentials.password | b64enc }}
+  POSTGRES_DB: {{ .Values.postgres.credentials.database | b64enc }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongo-secret
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+type: Opaque
+data:
+  MONGO_INITDB_DATABASE: {{ .Values.mongo.database | b64enc }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+type: Opaque
+data:
+  DATABASE_URL: {{ printf "postgresql://%s:%s@postgres:5432/%s" .Values.postgres.credentials.username .Values.postgres.credentials.password .Values.postgres.credentials.database | b64enc }}
+  MONGO_URL: {{ printf "mongodb://mongo:27017/%s" .Values.mongo.database | b64enc }}=== ./templates/voting/deployment.yaml ===
+{{- if .Values.voting.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: voting
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: voting
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.voting.replicas }}
+  selector:
+    matchLabels:
+      app: voting
+  template:
+    metadata:
+      labels:
+        app: voting
+    spec:
+      containers:
+        - name: voting
+          image: "{{ .Values.voting.image.repository }}:{{ .Values.voting.image.tag }}"
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.voting.service.port }}
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://postgres:5432/craftista"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "craftista"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "password"
+
+{{- end }}
+=== ./templates/frontend/service.yaml ===
+{{- if .Values.frontend.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: frontend
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  selector:
+    app: frontend
+  ports:
+  - protocol: TCP
+    port: {{ .Values.frontend.service.port }}
+    targetPort: {{ .Values.frontend.service.port }}
+  type: {{ .Values.frontend.service.type }}
+{{- end }}=== ./templates/frontend/deployment.yaml ===
+{{- if .Values.frontend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: frontend
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.frontend.service.port }}
+        env:
+        - name: CATALOGUE_URL
+          value: "http://catalogue:{{ .Values.catalogue.service.port }}"
+        - name: RECOMMENDATION_URL
+          value: "http://recommendation:{{ .Values.recommendation.service.port }}"
+        - name: VOTING_URL
+          value: "http://voting:{{ .Values.voting.service.port }}"
+        resources:
+          {{- toYaml .Values.frontend.resources | nindent 10 }}
+{{- end }}=== ./templates/mongo/pvc.yaml ===
+{{- if and .Values.mongo.enabled .Values.mongo.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-pvc
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: mongo
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.mongo.persistence.size }}
+  {{- if .Values.mongo.persistence.storageClass }}
+  storageClassName: {{ .Values.mongo.persistence.storageClass }}
+  {{- end }}
+{{- end }}=== ./templates/mongo/service.yaml ===
+{{- if .Values.mongo.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: mongo
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  selector:
+    app: mongo
+  ports:
+  - protocol: TCP
+    port: 27017
+    targetPort: 27017
+  type: ClusterIP
+{{- end }}=== ./templates/mongo/deployment.yaml ===
+{{- if .Values.mongo.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: mongo
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+      - name: mongo
+        image: "{{ .Values.mongo.image.repository }}:{{ .Values.mongo.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_DATABASE
+          value: {{ .Values.mongo.database | quote }}
+        volumeMounts:
+        - name: mongo-storage
+          mountPath: /data/db
+        resources:
+          {{- toYaml .Values.mongo.resources | nindent 10 }}
+      volumes:
+      - name: mongo-storage
+        {{- if .Values.mongo.persistence.enabled }}
+        persistentVolumeClaim:
+          claimName: mongo-pvc
+        {{- else }}
+        emptyDir: {}
+        {{- end }}
+{{- end }}=== ./templates/_helpers.tpl ===
+{{/*
+Expand the name of the chart.
+*/}}
+{{- define "craftista.name" -}}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Create a default fully qualified app name.
+*/}}
+{{- define "craftista.fullname" -}}
+{{- if .Values.fullnameOverride }}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- if contains $name .Release.Name }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Create chart name and version as used by the chart label.
+*/}}
+{{- define "craftista.chart" -}}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Common labels
+*/}}
+{{- define "craftista.labels" -}}
+helm.sh/chart: {{ include "craftista.chart" . }}
+{{ include "craftista.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
+Selector labels
+*/}}
+{{- define "craftista.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "craftista.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}=== ./templates/catalogue/service.yaml ===
+{{- if .Values.catalogue.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalogue
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: catalogue
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  selector:
+    app: catalogue
+  ports:
+  - protocol: TCP
+    port: {{ .Values.catalogue.service.port }}
+    targetPort: {{ .Values.catalogue.service.port }}
+  type: {{ .Values.catalogue.service.type }}
+{{- end }}=== ./templates/catalogue/deployment.yaml ===
+{{- if .Values.catalogue.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalogue
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: catalogue
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.catalogue.replicas }}
+  selector:
+    matchLabels:
+      app: catalogue
+  template:
+    metadata:
+      labels:
+        app: catalogue
+    spec:
+      containers:
+      - name: catalogue
+        image: "{{ .Values.catalogue.image.repository }}:{{ .Values.catalogue.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.catalogue.service.port }}
+        env:
+        - name: MONGO_URL
+          value: "mongodb://mongo:27017/{{ .Values.mongo.database }}"
+        resources:
+          {{- toYaml .Values.catalogue.resources | nindent 10 }}
+{{- end }}=== ./templates/recommendation/service.yaml ===
+{{- if .Values.recommendation.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: recommendation
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: recommendation
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  selector:
+    app: recommendation
+  ports:
+  - protocol: TCP
+    port: {{ .Values.recommendation.service.port }}
+    targetPort: {{ .Values.recommendation.service.port }}
+  type: {{ .Values.recommendation.service.type }}
+{{- end }}=== ./templates/recommendation/deployment.yaml ===
+{{- if .Values.recommendation.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommendation
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: recommendation
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.recommendation.replicas }}
+  selector:
+    matchLabels:
+      app: recommendation
+  template:
+    metadata:
+      labels:
+        app: recommendation
+    spec:
+      containers:
+      - name: recommendation
+        image: "{{ .Values.recommendation.image.repository }}:{{ .Values.recommendation.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.recommendation.service.port }}
+        env:
+        - name: CATALOGUE_URL
+          value: "http://catalogue:{{ .Values.catalogue.service.port }}"
+        resources:
+          {{- toYaml .Values.recommendation.resources | nindent 10 }}
+{{- end }}=== ./Linting ===
+=== ./values.yaml ===
+# Global configuration
+global:
+  namespace: craftista
+  imagePullPolicy: Never
+  
+# Environment configuration
+environment:
+  logLevel: INFO
+  appEnv: production
+
+# Database configurations
+postgres:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "13"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "400m"
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+  credentials:
+    username: craftista
+    password: password
+    database: craftista
+
+mongo:
+  enabled: true
+  image:
+    repository: mongo
+    tag: "4.4"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "400m"
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+  database: craftista
+
+# Application services
+catalogue:
+  enabled: true
+  replicas: 2
+  image:
+    repository: catalogue
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 5000
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+frontend:
+  enabled: true
+  replicas: 2
+  image:
+    repository: frontend
+    tag: latest
+  service:
+    type: LoadBalancer
+    port: 3000
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "300m"
+
+voting:
+  enabled: true
+  replicas: 2
+  image:
+    repository: voting
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "768Mi"
+      cpu: "400m"
+    limits:
+      memory: "1.5Gi"
+      cpu: "800m"
+  jpa:
+    hibernate:
+      ddlAuto: update
+    showSql: false
+    dialect: org.hibernate.dialect.PostgreSQLDialect
+
+recommendation:
+  enabled: true
+  replicas: 2
+  image:
+    repository: recommendation
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"=== ./Chart.yaml ===
+apiVersion: v2
+name: craftista
+description: A Helm chart for Craftista microservices application
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - craftista
+  - microservices
+  - origami
+home: https://github.com/craftista
+maintainers:
+  - name: DevOps Team
+    email: devops@craftista.com=== ./.helmignore ===
+# Patterns to ignore when building packages.
+*.swp
+*.bak
+*.tmp
+*~
+# Various IDEs
+.project
+.idea/
+*.tmproj
+.vscode/=== ./content.txt ===

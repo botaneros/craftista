@@ -1,0 +1,20 @@
+# templates/voting/service.yaml
+{{- if .Values.voting.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: voting
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: voting
+    app.kubernetes.io/name: {{ include "craftista.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  selector:
+    app: voting
+  ports:
+  - protocol: TCP
+    port: {{ .Values.voting.service.port }}
+    targetPort: {{ .Values.voting.service.port }}
+  type: {{ .Values.voting.service.type }}
+{{- end }}
