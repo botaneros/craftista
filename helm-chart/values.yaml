@@ -69,6 +69,8 @@ catalogue:
 frontend:
   enabled: true
   replicas: 2
+  rollout:
+    enabled: true
   image:
     repository: frontend
     tag: latest

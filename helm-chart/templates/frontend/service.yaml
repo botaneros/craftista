@@ -1,3 +1,4 @@
+{{- if .Values.frontend.rollout.enabled }}
 {{- if .Values.frontend.enabled }}
 apiVersion: v1
 kind: Service
@@ -16,4 +17,56 @@ spec:
     port: {{ .Values.frontend.service.port }}
     targetPort: {{ .Values.frontend.service.port }}
   type: {{ .Values.frontend.service.type }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-stable
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: frontend
+    service: stable
+spec:
+  ports:
+  - port: {{ .Values.frontend.service.port }}
+    targetPort: {{ .Values.frontend.service.port }}
+    protocol: TCP
+  selector:
+    app: frontend
+  type: {{ .Values.frontend.service.type }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-canary
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: frontend
+    service: canary
+spec:
+  ports:
+  - port: {{ .Values.frontend.service.port }}
+    targetPort: {{ .Values.frontend.service.port }}
+    protocol: TCP
+  selector:
+    app: frontend
+  type: {{ .Values.frontend.service.type }}
+{{- else }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: frontend
+spec:
+  ports:
+  - port: {{ .Values.frontend.service.port }}
+    targetPort: {{ .Values.frontend.service.port }}
+    protocol: TCP
+  selector:
+    app: frontend
+  type: {{ .Values.frontend.service.type }}
+{{- end }}
 {{- end }}
