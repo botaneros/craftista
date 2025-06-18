@@ -1,0 +1,33 @@
+{{- if and .Values.frontend.enabled .Values.frontend.rollout.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: frontend-success-rate
+  namespace: {{ .Values.global.namespace }}
+spec:
+  metrics:
+  - name: success-rate
+    interval: 10s
+    count: 5
+    successCondition: result >= 0.95
+    failureLimit: 3
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          sum(rate(http_requests_total{job="frontend",code!~"5.."}[1m])) /
+          sum(rate(http_requests_total{job="frontend"}[1m]))
+  - name: avg-response-time
+    interval: 10s
+    count: 5
+    successCondition: result < 0.5
+    failureLimit: 3
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{job="frontend"}[1m]))
+            by (le)
+          )
+{{- end }}
