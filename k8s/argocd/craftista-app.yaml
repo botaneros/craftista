@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: craftista
+  namespace: argocd
+  annotations:
+    # Configuración para Argo Image Updater
+    argocd-image-updater.argoproj.io/image-list: |
+      frontend=YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/craftista/frontend,
+      catalogue=YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/craftista/catalogue,
+      voting=YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/craftista/voting,
+      recommendation=YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/craftista/recommendation
+    argocd-image-updater.argoproj.io/frontend.update-strategy: semver
+    argocd-image-updater.argoproj.io/catalogue.update-strategy: semver
+    argocd-image-updater.argoproj.io/voting.update-strategy: semver
+    argocd-image-updater.argoproj.io/recommendation.update-strategy: semver
+    argocd-image-updater.argoproj.io/frontend.ignore-tags: latest,dev,test
+    argocd-image-updater.argoproj.io/catalogue.ignore-tags: latest,dev,test
+    argocd-image-updater.argoproj.io/voting.ignore-tags: latest,dev,test
+    argocd-image-updater.argoproj.io/recommendation.ignore-tags: latest,dev,test
+    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/git-branch: main
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/botaneros/craftista.git
+    targetRevision: main
+    path: helm/craftista
+    helm:
+      valueFiles:
+      - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: craftista
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true

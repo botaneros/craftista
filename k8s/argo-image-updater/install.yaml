@@ -1,0 +1,184 @@
+# k8s/argo-image-updater/install.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argocd-image-updater
+  namespace: argocd
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::651706751731:role/argo-image-updater-role
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argocd-image-updater
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - argoproj.io
+  resources:
+  - applications
+  verbs:
+  - get
+  - list
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argocd-image-updater
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argocd-image-updater
+subjects:
+- kind: ServiceAccount
+  name: argocd-image-updater
+  namespace: argocd
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-image-updater-config
+  namespace: argocd
+data:
+  log.level: debug  # Cambiar a info en producción
+  applications_api: argocd
+  registries.conf: |
+    registries:
+    - name: ECR
+      api_url: https://651706751731.dkr.ecr.us-east-1.amazonaws.com
+      prefix: 651706751731.dkr.ecr.us-east-1.amazonaws.com
+      ping: yes
+      credentials: ext:/scripts/ecr-login.sh
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-image-updater-ssh-config
+  namespace: argocd
+data:
+  config: |
+    Host github.com
+        PubkeyAcceptedKeyTypes +ssh-rsa
+        HostkeyAlgorithms +ssh-rsa
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-image-updater
+  namespace: argocd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-image-updater
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: argocd-image-updater
+    spec:
+      serviceAccountName: argocd-image-updater
+      containers:
+      - name: argocd-image-updater
+        image: quay.io/argoprojlabs/argocd-image-updater:v0.12.2
+        command:
+        - /usr/local/bin/argocd-image-updater
+        - run
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        env:
+        - name: APPLICATIONS_API
+          valueFrom:
+            configMapKeyRef:
+              key: applications_api
+              name: argocd-image-updater-config
+              optional: true
+        - name: ARGOCD_GRPC_WEB
+          value: "true"
+        - name: ARGOCD_SERVER
+          value: argocd-server.argocd.svc.cluster.local:443
+        - name: ARGOCD_INSECURE
+          value: "false"
+        - name: ARGOCD_PLAINTEXT
+          value: "false"
+        - name: ARGOCD_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: argocd.token
+              name: argocd-image-updater-secret
+        - name: IMAGE_UPDATER_KUBE_EVENTS
+          value: "true"
+        - name: AWS_REGION
+          value: us-east-1
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        volumeMounts:
+        - mountPath: /app/config
+          name: image-updater-conf
+        - mountPath: /app/config/ssh
+          name: ssh-known-hosts
+        - mountPath: /app/config/tls
+          name: tls-certs
+        - mountPath: /.ssh
+          name: ssh-config
+        - mountPath: /scripts
+          name: ecr-scripts
+      volumes:
+      - configMap:
+          name: argocd-image-updater-config
+        name: image-updater-conf
+      - configMap:
+          name: argocd-ssh-known-hosts-cm
+        name: ssh-known-hosts
+      - configMap:
+          name: argocd-tls-certs-cm
+        name: tls-certs
+      - configMap:
+          name: argocd-image-updater-ssh-config
+        name: ssh-config
+      - configMap:
+          name: ecr-login-script
+          defaultMode: 0755
+        name: ecr-scripts
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ecr-login-script
+  namespace: argocd
+data:
+  ecr-login.sh: |
+    #!/bin/bash
+    aws ecr get-login-password --region $AWS_REGION

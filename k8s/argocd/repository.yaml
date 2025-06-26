@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: craftista-repo
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+type: Opaque
+stringData:
+  type: git
+  url: git@github.com:botaneros/craftista.git
+  sshPrivateKey: |
+    -----BEGIN OPENSSH PRIVATE KEY-----
+    ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDbbmMGHrK2EQAJraY1xiyuIA65IXzuSISca9STZvd2AZNolRwe1V8zgS4PgEg2/p3ZKGXyBwmpUYrAE4HMY89p5fXH6SG8RunISBZOThUOCKDblGz4KhzwPeACLBwXMsHHmg1TcQFmj2c6+mPGFmaxHxoGcnCIHULnJhbfCizh4PesD1M04jlwsQrLf+dlZrhLr+WfgpzytLd0/eYkntwES+ShmEebF/zrUuQOWiTVKbsnASr/5+HLCRBAMg0REm9gS1LIT/xcS5ZZDD6pMIIfIp7gt97b+HDAKiuVH6xMQQB+8gq5nC3iwn58HEHcqsqP0gDtPVs9/Ty2vSB8lAfBl5//rcFNECYsfz8b6aDzlGR1Dc6PRP4rB/bXPXcXg88dFB+qoGOOpoe+Qn2Xn9Yxt+4ARQqpGY3U+QhQi5hoFLxmRVBs/k5iy0w5JlP1ZyhfUzyP+Q6gK9uNsV9+sKxoXnze0OhQIhth7DwVvCAlcEdcfc0/JXGPFKImzYxZPXMjdgBbVXslmTixpTFQDECUA0kkbvOv2J95LP9vcejTxHdBo8lxpvcsUBnJ05i+QqBUZOH/6iU3lxJGmhPsJLdsJKGk1vNbflKOSAlj3lzzHZpDkOUq0bEQAi6oJamFMRyUsJA4XyaWH5a7ojjNH3ue4dnvk+rzgluUFDGJm90i6Q== marc@FV005514
+    -----END OPENSSH PRIVATE KEY-----
