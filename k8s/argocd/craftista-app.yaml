@@ -6,10 +6,10 @@ metadata:
   annotations:
     # Configuración para Argo Image Updater
     argocd-image-updater.argoproj.io/image-list: |
-      frontend=YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/craftista/frontend,
-      catalogue=YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/craftista/catalogue,
-      voting=YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/craftista/voting,
-      recommendation=YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/craftista/recommendation
+      frontend=651706751731.dkr.ecr.us-east-1.amazonaws.com/craftista/frontend,
+      catalogue=651706751731.dkr.ecr.us-east-1.amazonaws.com/craftista/catalogue,
+      voting=651706751731.dkr.ecr.us-east-1.amazonaws.com/craftista/voting,
+      recommendation=651706751731.dkr.ecr.us-east-1.amazonaws.com/craftista/recommendation
     argocd-image-updater.argoproj.io/frontend.update-strategy: semver
     argocd-image-updater.argoproj.io/catalogue.update-strategy: semver
     argocd-image-updater.argoproj.io/voting.update-strategy: semver
@@ -25,7 +25,7 @@ spec:
   source:
     repoURL: https://github.com/botaneros/craftista.git
     targetRevision: main
-    path: helm/craftista
+    path: helm-chart
     helm:
       valueFiles:
       - values.yaml
