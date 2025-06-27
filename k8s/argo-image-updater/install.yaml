@@ -95,6 +95,9 @@ spec:
       serviceAccountName: argocd-image-updater
       containers:
       - name: argocd-image-updater
+        args:
+          - --loglevel=info
+          - --argocd.insecure=true
         image: quay.io/argoprojlabs/argocd-image-updater:v0.12.2
         command:
         - /usr/local/bin/argocd-image-updater
