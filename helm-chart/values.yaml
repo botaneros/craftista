@@ -1,35 +1,60 @@
 # Global configuration
 global:
   namespace: craftista
-  imagePullPolicy: Always  # Cambiar de Never a Always
-  registry: 651706751731.dkr.ecr.us-east-1.amazonaws.com
+  imagePullPolicy: Always
 
-# Application services
-frontend:
+# Environment configuration
+environment:
+  logLevel: INFO
+  appEnv: production
+
+# Database configurations
+postgres:
   enabled: true
-  replicas: 2
-  rollout:
-    enabled: true
   image:
-    repository: 651706751731.dkr.ecr.us-east-1.amazonaws.com/craftista/frontend
-    tag: v1.0.0  # Tag inicial
-  service:
-    type: LoadBalancer
-    port: 3000
+    repository: postgres
+    tag: "13"
   resources:
     requests:
-      memory: "128Mi"
-      cpu: "100m"
+      memory: "256Mi"
+      cpu: "200m"
     limits:
       memory: "512Mi"
-      cpu: "300m"
+      cpu: "400m"
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+  credentials:
+    username: craftista
+    password: password
+    database: craftista
 
+mongo:
+  enabled: true
+  image:
+    repository: mongo
+    tag: "4.4"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "400m"
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+  database: craftista
+
+# Application services
 catalogue:
   enabled: true
   replicas: 2
   image:
-    repository: 651706751731.dkr.ecr.us-east-1.amazonaws.com/craftista/catalogue
-    tag: v1.0.0
+    repository: catalogue
+    tag: latest
   service:
     type: ClusterIP
     port: 5000
@@ -41,12 +66,31 @@ catalogue:
       memory: "256Mi"
       cpu: "200m"
 
+frontend:
+  enabled: true
+  replicas: 2
+  rollout:
+    enabled: false  # Cambiar a false temporalmente
+  image:
+    repository: frontend
+    tag: latest
+  service:
+    type: LoadBalancer
+    port: 3000
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "300m"
+
 voting:
   enabled: true
   replicas: 2
   image:
-    repository: 651706751731.dkr.ecr.us-east-1.amazonaws.com/craftista/voting
-    tag: v1.0.0
+    repository: voting
+    tag: latest
   service:
     type: ClusterIP
     port: 8080
@@ -62,8 +106,8 @@ recommendation:
   enabled: true
   replicas: 2
   image:
-    repository: 651706751731.dkr.ecr.us-east-1.amazonaws.com/craftista/recommendation
-    tag: v1.0.0
+    repository: recommendation
+    tag: latest
   service:
     type: ClusterIP
     port: 8080
